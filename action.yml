@@ -5,7 +5,7 @@ branding:
   icon: check-circle
 inputs:
   image:
-    description: 'The image to scan. This option is mutually exclusive with "path" and "sbom". '
+    description: 'The image to scan. This option is mutually exclusive with "path" and "sbom".'
     required: false
   path:
     description: 'The path to scan. This option is mutually exclusive with "image" and "sbom".'
@@ -18,11 +18,11 @@ inputs:
     required: false
     default: "true"
   output-format:
-    description: 'Set the output parameter after successful action execution. Valid choices are "json" and "sarif".'
+    description: 'Set the output parameter after successful action execution. Valid choices are "sarif", "json", "table", "cyclonedx", "embedded-cyclonedx-vex-json", or "embedded-cyclonedx-vex-xml".'
     required: false
     default: "sarif"
   acs-report-enable:
-    description: "Generate a SARIF report and set the `sarif` output parameter after successful action execution.  This report is compatible with GitHub Automated Code Scanning (ACS), as the artifact to upload for display as a Code Scanning Alert report."
+    description: 'Generate a SARIF report and set the `sarif` output parameter after successful action execution.  This report is compatible with GitHub Automated Code Scanning (ACS), as the artifact to upload for display as a Code Scanning Alert report. Setting a different report format  than `sarif` with the `output-format` paramater is not compatible with having this flag set to "true".'
     required: false
     default: "true"
   severity-cutoff:
@@ -31,9 +31,9 @@ inputs:
     default: "medium"
 outputs:
   sarif:
-    description: "Path to a SARIF report file for the image"
+    description: 'Path to a SARIF report file for the image. Will only be set if the output format is "sarif".'
   report:
-    description: "Path to a JSON report file for the image"
+    description: "Path to a report file for the image. Also set for a SARIF report, in which case it will be the same value as the `sarif` output parameter."
 runs:
   using: "node16"
   main: "dist/index.js"

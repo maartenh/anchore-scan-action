@@ -112,6 +112,12 @@ async function runScan({
   severityCutoff,
   outputFormat,
 }) {
+  core.debug("Source: " + source);
+  core.debug("Fail Build: " + failBuild);
+  core.debug("Severity Cutoff: " + severityCutoff);
+  core.debug("ACS Enable: " + acsReportEnable);
+  core.debug("Output Format: " + outputFormat);
+
   const out = {};
 
   const env = {
@@ -132,21 +138,28 @@ async function runScan({
   }
 
   const SEVERITY_LIST = ["negligible", "low", "medium", "high", "critical"];
-  const FORMAT_LIST = ["sarif", "json"];
-  let cmdArgs = [];
-
-  if (core.isDebug()) {
-    cmdArgs.push(`-vv`);
-  }
+  const FORMAT_LIST = [
+    "sarif",
+    "json",
+    "table",
+    "cyclonedx",
+    "embedded-cyclonedx-vex-json",
+    "embedded-cyclonedx-vex-xml",
+  ];
 
   failBuild = failBuild.toLowerCase() === "true";
 
   acsReportEnable = acsReportEnable.toLowerCase() === "true";
 
+  if (outputFormat !== "sarif" && acsReportEnable) {
+    throw new Error(
+      `Invalid output-format selected. If acs-report-enabled is true (which is the default if it is omitted), the output-format parameter must be sarif or must be omitted`
+    );
+  }
+
   if (acsReportEnable) {
-    cmdArgs.push("-o", "sarif");
-  } else {
-    cmdArgs.push("-o", outputFormat);
+    outputFormat = "sarif";
+    // the acsReportEnable parameter is unused after this point, allowing for easier future removal of the parameter.
   }
 
   if (
@@ -168,28 +181,29 @@ async function runScan({
     )
   ) {
     throw new Error(
-      `Invalid output-format value is set to ${outputFormat} - please ensure you are choosing either json or sarif`
+      `Invalid output-format value is set to ${outputFormat} - please ensure you are choosing either sarif, json, table, cyclonedx, embedded-cyclonedx-vex-json, or embedded-cyclonedx-vex-xml`
     );
   }
 
   core.debug(`Installing grype version ${grypeVersion}`);
   await installGrype(grypeVersion);
 
-  core.debug("Source: " + source);
-  core.debug("Fail Build: " + failBuild);
-  core.debug("Severity Cutoff: " + severityCutoff);
-  core.debug("ACS Enable: " + acsReportEnable);
-  core.debug("Output Format: " + outputFormat);
-
   core.debug("Creating options for GRYPE analyzer");
 
   // Run the grype analyzer
   let cmdOutput = "";
   let cmd = `${grypeBinary}`;
+  let cmdArgs = [];
+
+  if (core.isDebug()) {
+    cmdArgs.push(`-vv`);
+  }
   if (severityCutoff !== "") {
     cmdArgs.push("--fail-on");
     cmdArgs.push(severityCutoff.toLowerCase());
   }
+  cmdArgs.push("-o", outputFormat);
+
   cmdArgs.push(source);
 
   // This /dev/null writable stream is required so the entire Grype output
@@ -227,10 +241,11 @@ async function runScan({
     core.debug(cmdOutput);
   }
 
-  if (acsReportEnable) {
+  if (outputFormat === "sarif") {
     const SARIF_FILE = "./results.sarif";
     fs.writeFileSync(SARIF_FILE, cmdOutput);
     out.sarif = SARIF_FILE;
+    out.report = SARIF_FILE; // Future updates can consolidate on using just the report output for any report file.
   } else {
     const REPORT_FILE = "./results.report";
     fs.writeFileSync(REPORT_FILE, cmdOutput);
